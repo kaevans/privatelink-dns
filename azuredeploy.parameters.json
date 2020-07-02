@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminUsername": {
+      "value": "myadmin"
+    },
+    "vNetResourceGroup": {
+      "value": "rg-networking-scus-002"
+    },
+    "vnetName": {
+      "value": "vnet-workloads-scus-002"
+    },
+    "vnetAddressPrefix": {
+      "value":"10.7.0.0/16"
+    },
+    "subnetName": {
+      "value": "IdentitySubnet"
+    },
+    "forwardIP":{
+      "value": "10.3.0.4"
+    },
+    "adminPublicKey": {
+      "reference": {
+          "keyVault": {
+          "id": "/subscriptions/04ece713-fe40-42a8-a280-8c55953f1133/resourceGroups/rg-workloadmanagement-scus-001/providers/Microsoft.KeyVault/vaults/kvworkloadmgmtscus001"
+          },
+          "secretName": "sshpublickey"
+      }
+    },
+    "scriptURL": {
+      "value": "https://kirkestorageeastus.blob.core.windows.net/deploy/forwarderSetup.sh?sv=2019-02-02&st=2020-07-02T12%3A40%3A25Z&se=2020-07-03T12%3A40%3A25Z&sr=b&sp=r&sig=vIeR1SF99qamOFz3U%2Bf3OsbZmE5SQeABb6R3aO4VyeQ%3D"
+    }
+  }
+}

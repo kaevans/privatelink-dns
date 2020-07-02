@@ -1,0 +1,246 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmName": {
+      "type": "string",
+      "defaultValue": "dnsproxy",
+      "metadata": {
+        "description": "Name of the Virtual Machine."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "User name for the Virtual Machine."
+      }
+    },
+    "vNetResourceGroup": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().name]",
+      "metadata": {
+        "description": "Name of the existing VNET resource group"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue":"vnet-workloads-scus-001",
+      "metadata": {
+        "description": "Name of the existing virtual network"
+      }
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "defaultValue":"10.5.0.0/16",
+      "metadata": {
+        "description": "Address space of the existing virtual network"
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "defaultValue":"dnsSubnet",
+      "metadata": {
+        "description": "Name of the existing subnet in the virtual network"
+      }
+    },
+    "forwardIP": {
+      "type": "string",
+      "defaultValue": "168.63.129.16",
+      "metadata": {
+        "description": "This is the IP address to forward DNS queries to. The default value represents Azure's internal DNS recursive resolvers."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "adminPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH Key for the Virtual Machine."
+      }
+    },
+    "scriptURL": {
+      "type": "string",      
+      "metadata": {
+        "description":"SAS URL to the forwarderSetup.sh script"
+      }
+    }
+  },
+  "variables": {
+    "vmSize": "Standard_D1_v2",
+    "osDiskType":"Standard_LRS",
+    "asetName": "dnsproxy-avail",
+    "nsgName": "dnsproxy-nsg",
+    "subnetRef": "[resourceId(parameters('vNetResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'),  parameters('subnetName'))]",
+    "storageAccountName":"[concat('stdiag', uniqueString(resourceGroup().id))]",
+    "storType": "Standard_LRS",    
+    "nicName": "[concat('nic-',parameters('vmName'), '001')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "comments": "Storage account for the VHD files for the VMs",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[parameters('location')]",
+      "properties": {
+        "accountType": "[variables('storType')]"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "comments": "availability set for creating a HA cluster, run the template multiple times to get multiple DNS servers",
+      "name": "[variables('asetName')]",
+      "apiVersion": "2017-12-01",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Aligned"
+      },
+      "properties": {
+        "platformFaultDomainCount": 2,
+        "platformUpdateDomainCount": 2
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "comments": "An NSG to prevent inbound traffic other than SSH, set sourceAddressPrefix to restrict access further or block all together (or remove the public ip) and ssh in from another vm",
+      "name": "[variables('nsgName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow_ssh_in",
+            "properties": {
+              "description": "The only thing allowed is SSH",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "comments": "A single network interface on each DNS server",
+      "apiVersion": "2018-10-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [                
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-03-01",
+      "comments": "A stock Ubuntu server, a VM extension will add the DNS server to it later",
+      "name": "[parameters('vmName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]",
+        "[concat('Microsoft.Storage/StorageAccounts/', variables('storageAccountName'))]",
+        "[concat('Microsoft.Compute/availabilitySets/', variables('asetName'))]"
+      ],
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('asetName'))]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "[variables('osDiskType')]"
+            }
+          },
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "UbuntuServer",
+            "sku": "18.04-LTS",
+            "version": "latest"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPublicKey')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('adminPublicKey')]"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "resources":[
+        {
+          "name": "config-app",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2019-03-01",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+          ],
+          "tags": {
+            "displayName": "config-app"
+          },
+          "properties": {
+            "publisher": "Microsoft.Azure.Extensions",
+            "type": "CustomScript",
+            "typeHandlerVersion": "2.1",
+            "autoUpgradeMinorVersion": true,
+            "settings": { 
+              "fileUris": [
+                "[parameters('scriptUrl')]"
+              ],
+              "commandToExecute": "[concat('sudo sh forwarderSetup.sh ',parameters('forwardIP'),' ', parameters('vnetAddressPrefix'))]"   
+            },
+            "protectedSettings": {
+               
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
