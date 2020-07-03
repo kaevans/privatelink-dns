@@ -12,9 +12,27 @@ However, if two spoke VNets need to reference the same private endpoint, there w
 
 One solution is to put the private endpoint in the hub network, and each spoke VNet connects to the Azure Private DNS Zone. If this solution does not meet your requirements, then the next option is to leverage a DNS forwarder in each of the spoke VNets. 
 
+## Pre-requisites
+
+This demo only deploys the custom DNS servers. You must have an existing virtual network and subnet to add the VM's NIC to. 
+
+The virtual network must use the default Azure-provided DNS and not use a custom DNS server. 
+
+![Azure-provided DNS](images/azuredns.png)
+
+This is because the `forwarderSetup.sh` script adds the virtual network's DNS suffix as a zone within the custom DNS server in the `named.conf.local` configuration file using the following code:
+
+````bash
+azurednssuffix=$(hostname -f | cut -d "." -f2-)
+````
+
+This value can only be obtained when the virtual network is configured to use the Azure-provided DNS. The result will look similar to the following:
+
+![named.conf.local](images/azurevnetdnssuffix.png)
+
 ## Solution
 
-This soluion uses [Bind DNS software](https://www.isc.org/downloads/bind/) to act as a DNS forwarder. For queries to database.windows.net, the DNS forwarder will forward the query to the Azure Recursive Resolver at `168.63.129.16`. For all other queries, it will forward to the DNS server specified in the `named.conf.options` configuration file, in this sample that is the DNS server in the hub VNet. 
+This solution uses [Bind DNS software](https://www.isc.org/downloads/bind/) to act as a DNS forwarder. For queries to database.windows.net, the DNS forwarder will forward the query to the Azure Recursive Resolver at `168.63.129.16`. For all other queries, it will forward to the DNS server specified in the `named.conf.options` configuration file, in this sample that is the DNS server in the hub VNet. 
 
 An ACL is placed on the DNS server so that only the spoke VNet is able to communicate to the DNS server. 
 
