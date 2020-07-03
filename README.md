@@ -18,7 +18,7 @@ This demo only deploys the custom DNS servers. You must have an existing virtual
 
 The virtual network must use the default Azure-provided DNS and not use a custom DNS server. 
 
-![Azure-provided DNS](images/azuredns.png)
+![Default Azure-provided DNS](images/azuredns.png)
 
 This is because the `forwarderSetup.sh` script adds the virtual network's DNS suffix as a zone within the custom DNS server in the `named.conf.local` configuration file using the following code:
 
@@ -28,7 +28,7 @@ azurednssuffix=$(hostname -f | cut -d "." -f2-)
 
 This value can only be obtained when the virtual network is configured to use the Azure-provided DNS. The result will look similar to the following:
 
-![named.conf.local](images/azurevnetdnssuffix.png)
+![Example named.conf.local](images/azurevnetdnssuffix.png)
 
 ## Solution
 
