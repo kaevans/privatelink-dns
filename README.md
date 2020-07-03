@@ -109,3 +109,8 @@ The real test, of course, is making sure that the VM can still contact the domai
 Finally, can we talk to the database? A simple test is to create a text file and then rename the extension as .UDL. Then open it to use the ODBC connection tool to test the connection. 
 
 ![UDL test](images/udltest.png)
+
+## Acknowledgement
+Thanks to [Daniel Mauser](https://github.com/dmauser/PrivateLink/tree/master/DNS-Integration-Scenarios) for his excellent articles on Private Link that helped me to understand the problem. 
+
+Special thanks to [Jim Dierkes](https://www.linkedin.com/in/jimdierkes/) for his help explaining and the Bind configuration. 
