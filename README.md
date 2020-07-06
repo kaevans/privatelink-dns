@@ -32,6 +32,12 @@ This value can only be obtained when the virtual network is configured to use th
 
 ![Example named.conf.local](images/azurevnetdnssuffix.png)
 
+> **Note:** If you did not have this configured to the Azure-provided DNS, you can modify this after deployment. Once the VM is deployed and running, use the Azure CLI to obtain the `dnsSettings.internalDomainNameSuffix` value using the `az network nic show` command to obtain the value and then modify the `named.conf.local` with the correct value.
+
+````bash
+az network nic show --ids /subscriptions/61b89b45-6850-48ac-b719-a7fb90bca5f0/resourceGroups/rg-identity-shared-scus-001/providers/Microsoft.Network/networkInterfaces/dc1749 --query "dnsSettings.internalDomainNameSuffix"
+````
+
 ## Solution
 
 This solution uses [Bind DNS software](https://www.isc.org/downloads/bind/) to act as a DNS forwarder. For queries to database.windows.net, the DNS forwarder will forward the query to the Azure Recursive Resolver at `168.63.129.16`. For all other queries, it will forward to the DNS server specified in the `named.conf.options` configuration file, in this sample that is the DNS server in the hub VNet. 
