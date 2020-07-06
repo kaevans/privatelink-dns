@@ -6,11 +6,13 @@ This sample is based on the document [Connect HDInsight to your on-premises netw
 
 ## Problem statement
 
-In a hub and spoke architecture where the hub VNet contains the DNS server, each spoke VNet must use a private DNS zone to reference the private endpoint. Each Azure Private DNS Zone requires a connection to the virtual network that references it. This works well if the private DNS zone is only used by the spoke and both the hub VNet and spoke VNet can connect to the Azure Private DNS Zone. 
+In a hub and spoke architecture where the hub VNet contains the DNS server, you must choose where to deploy the private link endpoint. 
 
-However, if two spoke VNets need to reference the same private endpoint, there would be two separate Azure Private DNS Zones for that endpoint. 
+Deploying to the hub VNet reduces cost and complexity because the Azure Private DNS is linked to the hub VNet. The spoke VNet queries its registered DNS server (typically the DNS server is located in the hub or on-premises), and the DNS server is configured with a forwarder to the Azure Recursive Resolver IP `168.63.129.16`. There are [no additional costs for VNet peering egress](https://azure.microsoft.com/en-us/pricing/details/private-link/) (see the FAQ).
 
-One solution is to put the private endpoint in the hub network, and each spoke VNet connects to the Azure Private DNS Zone. If this solution does not meet your requirements, then the next option is to leverage a DNS forwarder in each of the spoke VNets. 
+There may be restrictions that require the private endpoint to be deployed in each spoke VNet. In this case, each spoke VNet uses a private DNS zone to reference the private endpoint. Each Azure Private DNS Zone requires a connection to the virtual network that references it. This works well if the private DNS zone is only used by the spoke and both the hub VNet and spoke VNet can connect to the Azure Private DNS Zone. However, if two spoke VNets need to reference the same private endpoint, there would be two separate Azure Private DNS Zones for that endpoint. If the DNS is in the hub, this causes a conflict because the hub VNet would have to be linked to both Azure Private DNS zones, causing a conflict. 
+
+As stated above, one solution is to put the private endpoint in the hub network, and each spoke VNet connects to the Azure Private DNS Zone in the hub. If this solution does not meet your requirements, then the next option is to leverage a DNS forwarder in each of the spoke VNets. The repository contains a sample for deploying the custom DNS forwarders within a VNet and configuring the zones to the Azure Recursive Resolver.
 
 ## Pre-requisites
 

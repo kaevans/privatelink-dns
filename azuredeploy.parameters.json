@@ -6,13 +6,13 @@
       "value": "myadmin"
     },
     "vNetResourceGroup": {
-      "value": "rg-networking-scus-002"
+      "value": "rg-networking-scus-001"
     },
     "vnetName": {
-      "value": "vnet-workloads-scus-002"
+      "value": "vnet-workloads-scus-001"
     },
     "vnetAddressPrefix": {
-      "value":"10.7.0.0/16"
+      "value":"10.5.0.0/16"
     },
     "subnetName": {
       "value": "IdentitySubnet"
